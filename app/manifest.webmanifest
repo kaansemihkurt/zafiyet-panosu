@@ -1,0 +1,16 @@
+{
+  "name": "Zafiyet İstihbarat Panosu",
+  "short_name": "Zafiyet Panosu",
+  "description": "NVD CVE ve CISA KEV verisiyle zafiyet önceliklendirme panosu (ders projesi).",
+  "lang": "tr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060b1d",
+  "theme_color": "#060b1d",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

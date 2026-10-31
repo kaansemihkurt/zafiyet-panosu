@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zafiyet İstihbarat Panosu · CVE/KEV önceliklendirme</title>
+<meta name="description" content="NVD CVE ve CISA KEV verisiyle günlük güncellenen zafiyet önceliklendirme panosu (ders projesi, kurgusal müşteri).">
+<meta name="theme-color" content="#060b1d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preload" href="/data/cves.json" as="fetch" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#tablo" data-i18n="skip">Tabloya geç</a>
+<header class="bar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">◆</span>
+    <div>
+      <h1 data-i18n="title">Zafiyet İstihbarat Panosu</h1>
+      <p class="sub" data-i18n="subtitle">Sabah vardiyası önceliklendirme · CVE + KEV</p>
+    </div>
+  </div>
+  <p class="updated" id="updated"><span data-i18n="lastUpdate">Son güncelleme</span>: <b id="updatedAt">…</b> · <span data-i18n="source">Kaynak</span>: <a href="https://nvd.nist.gov/developers/vulnerabilities" rel="noopener" target="_blank">NVD CVE API 2.0</a>, <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" rel="noopener" target="_blank">CISA KEV</a></p>
+  <div class="tools">
+    <button type="button" class="btn ghost" id="helpBtn" aria-haspopup="dialog" data-i18n-title="shortcuts" title="Klavye kısayolları">⌨ <span class="hide-sm" data-i18n="shortcuts">Kısayollar</span> <kbd>?</kbd></button>
+    <div class="lang" role="group" aria-label="Dil / Language">
+      <button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <a class="btn ghost" href="/login" data-i18n="team">🔒 Ekip panosu</a>
+  </div>
+</header>
+
+<div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+
+<main class="layout" id="main">
+  <aside class="col filters" aria-labelledby="fltH">
+    <details class="fold" open>
+      <summary><h2 id="fltH" data-i18n="filters">Filtreler</h2></summary>
+      <label class="fld" for="q"><span data-i18n="search">Ara (CVE, üretici, ürün, açıklama)</span> <kbd>/</kbd></label>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="CVE-2026-, fortinet, sql injection…">
+
+      <label class="fld" for="scope" data-i18n="scope">Kapsam</label>
+      <select id="scope">
+        <option value="recent" data-i18n="scopeRecent">Son 10 günde yayımlananlar</option>
+        <option value="kev" data-i18n="scopeKev">KEV kataloğundakiler</option>
+        <option value="all" data-i18n="scopeAll">Hepsi</option>
+      </select>
+
+      <fieldset class="sev">
+        <legend data-i18n="severity">CVSS önem derecesi</legend>
+        <label><input type="checkbox" name="sev" value="critical" checked> <span class="sv critical">▲▲ <span data-i18n="critical">Kritik</span></span> <kbd>1</kbd></label>
+        <label><input type="checkbox" name="sev" value="high" checked> <span class="sv high">▲ <span data-i18n="high">Yüksek</span></span> <kbd>2</kbd></label>
+        <label><input type="checkbox" name="sev" value="medium" checked> <span class="sv medium">■ <span data-i18n="medium">Orta</span></span> <kbd>3</kbd></label>
+        <label><input type="checkbox" name="sev" value="low" checked> <span class="sv low">▼ <span data-i18n="low">Düşük</span></span> <kbd>4</kbd></label>
+        <label><input type="checkbox" name="sev" value="none" checked> <span class="sv none">○ <span data-i18n="none">Puan yok</span></span></label>
+      </fieldset>
+
+      <label class="row"><input type="checkbox" id="onlyKev"> <span data-i18n="onlyKev">Yalnızca KEV'de olanlar</span> <kbd>K</kbd></label>
+      <label class="row"><input type="checkbox" id="onlyWatch"> <span data-i18n="onlyWatch">Yalnızca izleme listem</span> <kbd>W</kbd></label>
+      <button type="button" class="btn ghost wide" id="reset"><span data-i18n="reset">Filtreleri sıfırla</span> <kbd>R</kbd></button>
+    </details>
+
+    <section class="watch" aria-labelledby="wH">
+      <h2 id="wH" data-i18n="watchlist">İzleme listem</h2>
+      <p class="hint" data-i18n="watchHint">Kurumunuzdaki ürün/üretici anahtar kelimeleri. Yalnızca bu tarayıcıda saklanır, sunucuya gönderilmez.</p>
+      <form id="wForm" class="add" autocomplete="off">
+        <label class="sr" for="wIn" data-i18n="watchAdd">Anahtar kelime ekle</label>
+        <input id="wIn" maxlength="40" placeholder="fortinet, moodle…">
+        <button class="btn" type="submit" data-i18n="add">Ekle</button>
+      </form>
+      <ul id="wList" class="chips" aria-live="polite"></ul>
+      <p class="hint" id="wSuggest"><span data-i18n="suggest">Öneri:</span></p>
+    </section>
+  </aside>
+
+  <section class="col center" aria-label="Özet ve grafikler">
+    <div class="kpis" id="kpis" aria-live="polite">
+      <article class="kpi sk"><h3 data-i18n="kVisible">Filtrelenen CVE</h3><p class="v" id="kVisible"></p><p class="d" id="kVisibleD"></p></article>
+      <article class="kpi sk"><h3 data-i18n="kCritical">Kritik (CVSS ≥ 9)</h3><p class="v" id="kCritical"></p><p class="d" id="kCriticalD"></p></article>
+      <article class="kpi sk"><h3 data-i18n="kKev">KEV'de (aktif istismar)</h3><p class="v" id="kKev"></p><p class="d" id="kKevD"></p></article>
+      <article class="kpi sk"><h3 data-i18n="kWatch">İzleme listesi eşleşmesi</h3><p class="v" id="kWatch"></p><p class="d" id="kWatchD"></p></article>
+    </div>
+
+    <div class="charts">
+      <article class="card chart-card">
+        <div class="ch-head"><h2 data-i18n="cTrend">Haftalık yeni CVE ve KEV eklemeleri</h2>
+          <button type="button" class="btn small ghost" data-table="tTrend" aria-expanded="false" aria-controls="tTrend" data-i18n="asTable">Veriyi tablo olarak gör</button></div>
+        <p class="summary" id="sTrend"></p>
+        <div class="chart sk" id="chTrend" role="img" aria-labelledby="sTrend"></div>
+        <div class="tbl-wrap" id="tTrend" hidden></div>
+      </article>
+      <article class="card chart-card">
+        <div class="ch-head"><h2 data-i18n="cCvss">CVSS dağılımı (filtrelenmiş)</h2>
+          <button type="button" class="btn small ghost" data-table="tCvss" aria-expanded="false" aria-controls="tCvss" data-i18n="asTable">Veriyi tablo olarak gör</button></div>
+        <p class="summary" id="sCvss"></p>
+        <div class="chart sk" id="chCvss" role="img" aria-labelledby="sCvss"></div>
+        <div class="tbl-wrap" id="tCvss" hidden></div>
+      </article>
+    </div>
+
+    <article class="card" id="tablo" tabindex="-1" aria-labelledby="tH">
+      <div class="ch-head">
+        <h2 id="tH" data-i18n="table">Ayrıntı tablosu</h2>
+        <p class="hint" id="tInfo" aria-live="polite"></p>
+      </div>
+      <div class="tbl-wrap main-tbl">
+        <table id="grid">
+          <caption class="sr" data-i18n="tableCap">Filtrelenmiş CVE listesi; sütun başlıklarıyla sıralanabilir</caption>
+          <thead><tr>
+            <th scope="col" aria-sort="descending"><button type="button" data-sort="prio" data-i18n="thPrio">Öncelik</button></th>
+            <th scope="col" aria-sort="none"><button type="button" data-sort="id">CVE</button></th>
+            <th scope="col" aria-sort="none"><button type="button" data-sort="score">CVSS</button></th>
+            <th scope="col" aria-sort="none"><button type="button" data-sort="pub" data-i18n="thPub">Yayın</button></th>
+            <th scope="col" aria-sort="none"><button type="button" data-sort="kev">KEV</button></th>
+            <th scope="col" data-i18n="thVp">Üretici / ürün</th>
+            <th scope="col" data-i18n="thDesc">Açıklama (NVD, İngilizce)</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="state" id="empty" hidden>
+        <p class="big">∅ <span data-i18n="emptyT">Bu filtrelerle sonuç yok.</span></p>
+        <p class="hint" data-i18n="emptyD">Kapsamı "Hepsi" yapmayı, önem derecelerini açmayı veya aramayı kısaltmayı deneyin.</p>
+        <button type="button" class="btn" id="emptyReset" data-i18n="reset">Filtreleri sıfırla</button>
+      </div>
+      <nav class="pager" aria-label="Sayfalama">
+        <button type="button" class="btn small ghost" id="prev" data-i18n="prev">← Önceki</button>
+        <span id="page" class="hint"></span>
+        <button type="button" class="btn small ghost" id="next" data-i18n="next">Sonraki →</button>
+      </nav>
+    </article>
+  </section>
+
+  <aside class="col right" aria-labelledby="pH">
+    <section class="card">
+      <h2 id="pH" data-i18n="priority">Bugünün önceliği</h2>
+      <p class="hint" data-i18n="priorityD">Filtrelenen kayıtlar arasında öncelik puanı en yüksek 10 CVE.</p>
+      <ol id="top" class="top"></ol>
+    </section>
+    <section class="card formula">
+      <h2 data-i18n="formula">Öncelik puanı nasıl hesaplanır?</h2>
+      <ul>
+        <li><b>50</b> × CVSS / 10</li>
+        <li><b>+30</b> <span data-i18n="fKev">KEV kataloğunda (aktif istismar ediliyor)</span></li>
+        <li><b>+10</b> <span data-i18n="fRw">fidye yazılımı kampanyasında kullanılıyor</span></li>
+        <li><b>+10</b> <span data-i18n="fWatch">izleme listenizle eşleşiyor</span></li>
+      </ul>
+      <p class="hint" data-i18n="fNote">Puan bir karar destek ölçüsüdür; nihai öncelik ekibin değerlendirmesiyle belirlenir.</p>
+    </section>
+  </aside>
+</main>
+
+<div class="state error" id="fatal" role="alert" hidden>
+  <p class="big">⚠ <span data-i18n="errT">Veri yüklenemedi.</span></p>
+  <p class="hint" data-i18n="errD">Veri sunucusuna ulaşılamadı ve bu tarayıcıda kayıtlı önceki veri yok. Bağlantınızı kontrol edip yeniden deneyin.</p>
+  <button type="button" class="btn" id="retry" data-i18n="retry">Yeniden dene</button>
+</div>
+
+<footer class="foot">
+  <p data-i18n="disclaimer">Kurgusal bir müşteri (üniversite bilgi işlem güvenlik ekibi) için hazırlanmış ders projesidir; resmî bir kurum aracı değildir. Bilgilendirme amaçlıdır. Veriler: NIST NVD ve CISA KEV (ABD kamu malı).</p>
+  <p><a href="https://github.com/kaansemihkurt/zafiyet-panosu" rel="noopener" target="_blank">GitHub</a> · <a href="/.well-known/security.txt">security.txt</a> · Kaan Semih Kurt</p>
+</footer>
+
+<dialog id="help" aria-labelledby="hH">
+  <h2 id="hH" data-i18n="shortcuts">Klavye kısayolları</h2>
+  <dl class="keys">
+    <dt><kbd>/</kbd></dt><dd data-i18n="kSearch">Aramaya odaklan</dd>
+    <dt><kbd>K</kbd></dt><dd data-i18n="kK">Yalnızca KEV aç/kapa</dd>
+    <dt><kbd>W</kbd></dt><dd data-i18n="kW">Yalnızca izleme listem aç/kapa</dd>
+    <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd data-i18n="kSev">Kritik / Yüksek / Orta / Düşük aç/kapa</dd>
+    <dt><kbd>R</kbd></dt><dd data-i18n="kR">Filtreleri sıfırla</dd>
+    <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd data-i18n="kPage">Önceki / sonraki tablo sayfası</dd>
+    <dt><kbd>T</kbd></dt><dd data-i18n="kT">Tabloya git</dd>
+    <dt><kbd>L</kbd></dt><dd data-i18n="kL">Dili değiştir (TR/EN)</dd>
+    <dt><kbd>Esc</kbd></dt><dd data-i18n="kEsc">Pencereyi kapat / aramadan çık</dd>
+  </dl>
+  <form method="dialog"><button class="btn" data-i18n="close">Kapat</button></form>
+</dialog>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pano · Zafiyet İstihbarat Panosu</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/assets/style.css">
+<script src="/assets/panel.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div><b>Zafiyet İstihbarat Panosu</b> <span class="muted" id="kevMeta"></span></div>
+  <div class="who"><span id="user" class="muted"></span> <span id="role" class="badge"></span> <a class="btn small ghost" href="/logout">Çıkış</a></div>
+</header>
+<main class="grid">
+  <section class="card">
+    <div class="head"><h2>İzleme listesi ve öncelikler</h2><span class="muted" id="wlCount"></span></div>
+    <p class="muted small">Kartın korunan varlığı: ekibin takip ettiği zafiyetler ve öncelikleri. İzleyici yalnızca okur; ekleme, güncelleme ve silme sadece analist rolüne açıktır (sunucu tarafında da denetlenir).</p>
+    <form id="wlForm" class="row hidden" autocomplete="off">
+      <input id="fCve" placeholder="CVE-2024-3400" required pattern="[Cc][Vv][Ee]-\d{4}-\d{4,7}" aria-label="CVE">
+      <select id="fPri" aria-label="Öncelik"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option></select>
+      <input id="fNote" placeholder="Not (ör. sistemde yama bekliyor)" maxlength="280" aria-label="Not">
+      <button class="btn" type="submit">Kaydet</button>
+    </form>
+    <p id="wlMsg" class="msg" role="status"></p>
+    <table><thead><tr><th>Öncelik</th><th>CVE</th><th>Not</th><th>Güncelleme</th><th class="act"></th></tr></thead><tbody id="wlBody"></tbody></table>
+  </section>
+  <section class="card">
+    <div class="head"><h2>CISA KEV: aktif istismar edilen zafiyetler</h2><input id="q" type="search" placeholder="Ara: CVE, üretici, ürün…" aria-label="Ara"></div>
+    <p class="muted small">Kaynak: CISA Known Exploited Vulnerabilities kataloğu, vekil API üzerinden ve 6 saat önbellekli.</p>
+    <table><thead><tr><th>CVE</th><th>Üretici / ürün</th><th>Zafiyet</th><th>Eklenme</th><th>Son tarih</th><th>Fidye</th><th class="act"></th></tr></thead><tbody id="kevBody"></tbody></table>
+    <p class="muted small" id="kevMore"></p>
+  </section>
+</main>
+</body>
+</html>
