@@ -1,0 +1,70 @@
+name: data
+# Günlük veri çekimi: NVD CVE API 2.0 + CISA KEV → "data" dalına anlık görüntü → yayın.
+# Kod dalı (main) korumalıdır; veri ayrı "data" dalında birikir, böylece Actions main'e push etmez.
+on:
+  schedule:
+    - cron: "15 4 * * *"     # her gün 07:15 (TR)
+  workflow_dispatch:
+
+permissions:
+  contents: write   # yalnızca "data" dalına anlık görüntü yazmak için (main dal koruması bunu engeller)
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-publish:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+
+      - name: Veri dalını al (yoksa oluştur)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "zafiyet-panosu-bot"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          REPO="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$REPO" data >/dev/null 2>&1; then
+            git clone --depth 1 --branch data "$REPO" datastore
+          else
+            mkdir datastore && cd datastore && git init -b data && git remote add origin "$REPO"
+          fi
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Testler
+        run: python -m unittest pipeline/test_fetch_data.py
+
+      - name: NVD + KEV çek
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}   # yalnızca burada; istemciye gitmez
+          NVD_URL: ${{ vars.NVD_URL }}              # boşsa varsayılan; demo için bozulabilir
+        run: python pipeline/fetch_data.py --out datastore --days 10
+
+      - name: Anlık görüntüyü data dalına yaz
+        working-directory: datastore
+        run: |
+          git add -A
+          git commit -m "veri: $(date -u +%Y-%m-%dT%H:%MZ) anlık görüntü" || echo "değişiklik yok"
+          git push origin data
+
+      - name: Veriyi uygulamaya kopyala
+        run: |
+          mkdir -p app/data
+          cp datastore/cves.json datastore/trend.json datastore/meta.json app/data/
+          cp "config/staticwebapp.config.hardened.json" app/staticwebapp.config.json
+
+      - name: Yayınla
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: app
+          api_location: api
+          output_location: ""
+          skip_app_build: true
