@@ -1,0 +1,8 @@
+{
+  "name": "zafiyet-panosu-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zafiyet İstihbarat Panosu API — bağımlılıksız (yalnızca Node.js yerleşik modülleri)",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" }
+}
