@@ -1,0 +1,7 @@
+flowchart LR
+  NVD["NVD CVE API 2.0<br/>son 10 gün · KEV CVSS · haftalık sayılar"] --> GA
+  KEV["CISA KEV JSON"] --> GA
+  GA["GitHub Actions · günde 1<br/>fetch_data.py<br/>anahtar: GitHub Secrets"] --> DB[("data dalı<br/>günlük snapshot")]
+  GA --> CDN["Azure Static Web Apps<br/>/data/cves · trend · meta.json"]
+  CDN --> UI["Tarayıcı · pano<br/>KPI → grafik → tablo<br/>izleme listesi: localStorage<br/>çevrimdışı: service worker"]
+  GA -. "kaynak çökerse önceki veri korunur" .-> CDN

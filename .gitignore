@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.local.json
+local.settings.json
+results.sarif
+.DS_Store
+app/data/

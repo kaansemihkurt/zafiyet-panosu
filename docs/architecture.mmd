@@ -1,0 +1,44 @@
+flowchart LR
+  subgraph TB0["Güven sınırı 0 · İnternet (güvenilmez)"]
+    U["👤 Kullanıcı tarayıcısı<br/>izleyici · analist · yetkisiz"]
+    ATK["⚠ Saldırgan"]
+  end
+  subgraph TB1["Güven sınırı 1 · Microsoft Entra ID (kimlik sağlayıcı)"]
+    IDP["Entra ID / Microsoft hesabı<br/>+ MFA"]
+  end
+  subgraph TB2["Güven sınırı 2 · Azure Static Web Apps (Free) · HTTPS/HSTS · CSP"]
+    EDGE["SWA kenar: /.auth oturum<br/>rota kuralları: /panel/* → viewer|analyst<br/>/api/* → authenticated · 401→giriş · 403"]
+    WEB["Herkese açık pano (/)<br/>/data/*.json · PWA · satır içi kod yok"]
+    PANEL["Ekip panosu (/panel/)<br/>yalnız viewer · analyst"]
+    API["Yönetilen Functions API (Node 20)<br/>/api/me · /api/kev · /api/watchlist<br/>rol kontrolü + erişim logu"]
+  end
+  subgraph TB3["Güven sınırı 3 · Azure veri ve izleme"]
+    TBL[("Table Storage<br/>watchlist<br/>SAS: yalnız t/o/raud, süreli")]
+    AI["Application Insights<br/>+ Log Analytics (30 gün, 100 MB/gün)"]
+    AL["Metrik alarmı → e-posta<br/>5 dk'da >5 başarısız istek"]
+    BUD["Bütçe alarmı (1 USD)"]
+  end
+  KEV["CISA KEV JSON<br/>(herkese açık, anahtarsız)"]
+  NVD["NVD CVE API 2.0<br/>(API anahtarı: GitHub Secrets)"]
+  subgraph TB4["Güven sınırı 4 · GitHub"]
+    GH["Depo (main korumalı)<br/>gitleaks · npm audit · CodeQL · Dependabot"]
+    CI["Actions: deploy (contents: read)<br/>secret: SWA dağıtım belirteci"]
+    DP["Actions: data (günlük cron)<br/>fetch_data.py · NVD_API_KEY secret"]
+    DB[("data dalı<br/>günlük anlık görüntüler")]
+  end
+  U -- "1 HTTPS isteği" --> EDGE
+  ATK -. "yetkisiz deneme → 403" .-> EDGE
+  EDGE -- "2 giriş yönlendirmesi" --> IDP
+  IDP -- "3 kimlik + roller (davet)" --> EDGE
+  EDGE -- "4 statik içerik + veri" --> WEB
+  EDGE -- "4b rol kontrollü" --> PANEL
+  EDGE -- "5 x-ms-client-principal" --> API
+  API -- "6 SAS ile okuma/yazma" --> TBL
+  API -- "7 önbellekli vekil (6 sa)" --> KEV
+  API -- "8 erişim logu (takma adlı)" --> AI
+  AI --> AL
+  GH --> CI -- "9 dağıtım (token)" --> EDGE
+  DP -- "10 günde 1 çekim" --> NVD
+  DP -- "10" --> KEV
+  DP -- "11 snapshot" --> DB
+  DP -- "12 veri + dağıtım" --> EDGE
