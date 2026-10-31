@@ -26,7 +26,7 @@ jobs:
           TARGET: ${{ github.event.inputs.target }}
         run: |
           echo "$TARGET" | grep -Eq '^https://[a-z0-9-]+\.[0-9]*\.?azurestaticapps\.net/?$' || { echo "Yalnızca kendi azurestaticapps.net adresimiz taranabilir"; exit 1; }
-      - uses: zaproxy/action-baseline@v0.12.0
+      - uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ github.event.inputs.target }}
           rules_file_name: .zap/rules.tsv
